@@ -84,8 +84,6 @@ router.post('/login', async (req,res) => {
         const { email, password } = req.body;
         if (!email || !password) 
             return res.status(400).send({ status: "error", message: 'Incomplete values'});
-
-        //No es necesario preguntar por el password desde la base de datos
         const user = await User.findOne({email});
         if(!user){
             return res.status(401).send('Usuario no encontrado');
@@ -95,7 +93,7 @@ router.post('/login', async (req,res) => {
             return res.status(403).send({ status: "error", message: 'Incorrect password'});
         }
         req.session.user = user;
-        let token = jwt.sign( {email, role:user.rol}, "coderSecret", { expiresIn : "24h"});
+        let token = jwt.sign( {email, role:user.rol, nombre:user.first_name, apellido:user.last_name, edad: user.age}, "coderSecret", { expiresIn : "24h"});
         res.cookie('tokenCookie', token, {httpOnly: true, maxAge:60*60*1000 }).redirect('/perfil');
     }catch(error){
         console.error('Error al iniciar sesión');
@@ -104,16 +102,6 @@ router.post('/login', async (req,res) => {
 
 })
 
-// router.post('/login', (req, res) => {
-//     const { email, password } = req.body;
-//     if(email === "coder@coder.com" && password === "password"){
-//         let token = jwt.sign( {email, role:"user"}, "coderSecret", { expiresIn : "24h"});
-//         res.cookie('tokenCookie', token, {httpOnly: true, maxAge:60*60*1000 }).send({message : "Login exitoso"});
-//         res.redirect('/perfil');
-//     }else{
-//         res.status(401).send({message : "Credenciales inválidas"});
-//     }
-// });
 
 //Restaurar contraseña
 router.post('/restore-password', async (req, res) => {
