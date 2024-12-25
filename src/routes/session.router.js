@@ -2,8 +2,57 @@ import express from 'express';
 import User from '../models/user.models.js';
 import { createHash , isValidPassword } from '../utils.js'
 import jwt from 'jsonwebtoken'
+import { cookieExtractor } from '../config/passport.config.js';
 
 const router = express.Router();
+
+
+router.get('/current/', async (req, res) => {
+    try {
+        // Extraer el token de las cookies
+        const token = cookieExtractor(req);
+
+        if (!token) {
+            return res.status(401).send({
+                status: false,
+                message: 'No se encontró el token en las cookies',
+                payload: null
+            });
+        }
+
+        // Validar el token y obtener el payload
+        const decodedToken = jwt.verify(token, 'coderSecret');
+
+        // Respuesta exitosa con los datos validados del token
+        return res.status(200).send({
+            status: true,
+            message: 'Token válido',
+            payload: decodedToken
+        });
+    } catch (error) {
+        // Manejo de errores en la validación del token
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(400).send({
+                status: false,
+                message: 'El token es inválido',
+                payload: null
+            });
+        } else if (error.name === 'TokenExpiredError') {
+            return res.status(401).send({
+                status: false,
+                message: 'El token ha expirado',
+                payload: null
+            });
+        }
+
+        // Errores inesperados
+        return res.status(500).send({
+            status: false,
+            message: 'Error interno del servidor',
+            payload: error.message
+        });
+    }
+});
 
 //Registración
 router.post('/register', async (req,res) => {
@@ -12,14 +61,14 @@ router.post('/register', async (req,res) => {
         if (!first_name || !last_name || !email || !age|| !rol) 
             return res.status(400).send({ status: false, message: 'All fields are required' });
 
-            let newUser = new User({
-                first_name, 
-                last_name,
-                email, 
-                age,
-                rol,
-                password: createHash(password)
-            });
+        let newUser = new User({
+            first_name, 
+            last_name,
+            email, 
+            age,
+            rol,
+            password: createHash(password)
+        });
 
         await newUser.save();
         res.redirect('/login');
